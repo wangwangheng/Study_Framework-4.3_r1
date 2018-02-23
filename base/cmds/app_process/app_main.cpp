@@ -134,7 +134,21 @@ static void setArgv0(const char *argv0, const char *newArgv0)
 {
     strlcpy(const_cast<char *>(argv0), newArgv0, strlen(argv0));
 }
+/**
+Zygote进程由init通过fork而来，我们回顾一下init.rc中设置的启动参数：
 
+-Xzygote /system/bin --zygote --start-system-server
+
+init.rc中的配置
+
+service zygote /system/bin/app_process -Xzygote /system/bin --zygote --start-system-server
+    socket zygote stream 666
+    onrestart write /sys/android_power/request_state wake
+    onrestart write /sys/power/state on
+    onrestart restart media
+    onrestart restart netd
+
+**/
 int main(int argc, char* const argv[])
 {
 #ifdef __arm__
@@ -212,14 +226,16 @@ int main(int argc, char* const argv[])
         }
     }
 
+    // 篡改进程名字，把app_process修改为zygote
     if (niceName && *niceName) {
         setArgv0(argv0, niceName);
         set_process_name(niceName);
     }
-
+    // 把runtime的parent设置为/system/bin
     runtime.mParentDir = parentDir;
 
     if (zygote) {
+        // 关键代码，按照init.rc中的配置，必然走到这个地方~
         runtime.start("com.android.internal.os.ZygoteInit",
                 startSystemServer ? "start-system-server" : "");
     } else if (className) {

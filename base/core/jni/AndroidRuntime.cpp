@@ -437,6 +437,8 @@ void AndroidRuntime::parseExtraOpts(char* extraOptsBuf)
 }
 
 /*
+ 启动Dalvik虚拟机，并获得JavaVM和JNIEnv的引用
+
  * Start the Dalvik Virtual Machine.
  *
  * Various arguments, most determined by system properties, are passed in.
@@ -472,7 +474,20 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv)
       kEMJitCompiler,
     } executionMode = kEMDefault;
 
+/**
 
+下面的代码是用来设置JNI check选项的。JNIcheck 指的是Native层调用JNI函数时，
+系统所做的一些检查工作。例如调用NewUTFString函数时，系统会检查传入的字符串是不是符合
+UTF-8的要求。JNI check还能检查资源是否正确释放。但这个选项也有其副作用，比如：
+
+1）因为检查工作比较耗时，所以会影响系统运行速度。
+2）有些检查过于严格，例如上面的字符串检查，一旦出错，则调用进程就会abort。
+
+所以，JNI check选项一般只在调试的eng版设置，而正式发布的user版则不设置该选项。
+
+下面这几句代码就控制着是否启用JNI check，这是由系统属性决定的，eng版如经过特殊配置，也可以去掉JNI check。
+
+**/
     property_get("dalvik.vm.checkjni", propBuf, "");
     if (strcmp(propBuf, "true") == 0) {
         checkJni = true;
@@ -854,7 +869,7 @@ void AndroidRuntime::start(const char* className, const char* options)
     jobjectArray strArray;
     jstring classNameStr;
     jstring optionsStr;
-
+    // 创建一个两个元素的字符串数组，并把此函数的两个参数拷贝到数组中
     stringClass = env->FindClass("java/lang/String");
     assert(stringClass != NULL);
     strArray = env->NewObjectArray(2, stringClass, NULL);

@@ -503,7 +503,7 @@ public class ZygoteInit {
             throw new RuntimeException(ex);
         }
 
-        /* For child process */
+        /* For child process ,如果pid为零，则表示处于子进程中，也就是处于system_server进程中*/
         if (pid == 0) {
             handleSystemServerProcess(parsedArgs);
         }
